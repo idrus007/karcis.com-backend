@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  log      = ["query", "info", "warn", "error"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum OrderStatus {
+  pending
+  paid
+  expired
+  canceled
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       Role     @default(user)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  orders     Order[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  location    String
+  date        DateTime  
+  image       String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  tickets     Ticket[]
+
+  @@map("events")
+}
+
+model Ticket {
+  id          String   @id @default(uuid())
+  name        String
+  price       Int
+  quantity    Int
+  event_id    String  
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  event       Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)    
+  order_items OrderItem[]
+
+  @@map("tickets")
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  user_id     String
+  total       Int  
+  snap_token  String
+  status      OrderStatus @default(pending)
+  qr_token    String      @unique
+  is_redeemed Boolean     @default(false)
+  paid_at     DateTime?
+  created_at DateTime     @default(now())
+
+  user       User         @relation(fields: [user_id], references: [id])
+  order_items OrderItem[]  
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  order_id   String
+  ticket_id  String
+  quantity   Int
+
+  order      Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  ticket     Ticket   @relation(fields: [ticket_id], references: [id])
+
+  @@map("order_items")
+}
